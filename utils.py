@@ -1,6 +1,6 @@
 import os, random
 from pathlib import Path
-from kaggle import api
+# from kaggle import api
 import torch
 import torchvision
 import torchvision.transforms as T
@@ -9,6 +9,7 @@ from PIL import Image
 from fastdownload import FastDownload
 from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader
+from torchvision.datasets import Food101
 
 cifar_labels = "airplane,automobile,bird,cat,deer,dog,frog,horse,ship,truck".split(",")
 alphabet_labels = "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z".split(" ")
@@ -103,12 +104,16 @@ def get_data(args):
         T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ])
 
-    train_dataset = torchvision.datasets.ImageFolder(os.path.join(args.dataset_path, args.train_folder), transform=train_transforms)
-    val_dataset = torchvision.datasets.ImageFolder(os.path.join(args.dataset_path, args.val_folder), transform=val_transforms)
+    # train_dataset = torchvision.datasets.ImageFolder(os.path.join(args.dataset_path, args.train_folder), transform=train_transforms)
+    # val_dataset = torchvision.datasets.ImageFolder(os.path.join(args.dataset_path, args.val_folder), transform=val_transforms)
+    train_dataset = Food101(args.dataset_path, split='train', download=True, transform=train_transforms)
+    val_dataset = Food101(args.dataset_path, split='test', download=True, transform=train_transforms)
     
     if args.slice_size>1:
-        train_dataset = torch.utils.data.Subset(train_dataset, indices=range(0, len(train_dataset), args.slice_size))
-        val_dataset = torch.utils.data.Subset(val_dataset, indices=range(0, len(val_dataset), args.slice_size))
+        # train_dataset = torch.utils.data.Subset(train_dataset, indices=range(0, len(train_dataset), args.slice_size))
+        # val_dataset = torch.utils.data.Subset(val_dataset, indices=range(0, len(val_dataset), args.slice_size))
+        train_dataset = Food101(args.dataset_path, split='train', download=True, transform=train_transforms)
+        val_dataset = Food101(args.dataset_path, split='test', download=True, transform=train_transforms)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
     val_dataset = DataLoader(val_dataset, batch_size=2*args.batch_size, shuffle=False, num_workers=args.num_workers)
