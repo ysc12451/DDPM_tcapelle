@@ -23,6 +23,7 @@ from modules import UNet_conditional, EMA
 config = SimpleNamespace(    
     run_name = "DDPM_conditional",
     remove_deep_conv = True,
+    basic_dim = 64,
     epochs = 100,
     noise_steps=1000,
     seed = 42,
@@ -57,7 +58,7 @@ class Diffusion:
         self.alpha_hat = torch.cumprod(self.alpha, dim=0)
 
         self.img_size = img_size
-        self.model = UNet_conditional(c_in, c_out, num_classes=num_classes, **kwargs).to(device)
+        self.model = UNet_conditional(c_in, c_out, time_dim=256, num_classes=num_classes, **kwargs).to(device)
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
         self.device = device
         self.c_in = c_in
@@ -185,12 +186,11 @@ class Diffusion:
         self.save_model(run_name=args.run_name, epoch=epoch)
 
 
-
-
 def parse_args(config):
     parser = argparse.ArgumentParser(description='Process hyper-parameters')
     parser.add_argument('--run_name', type=str, default=config.run_name, help='name of the run')
-    parser.add_argument('--rm_deep', type=str, default=config.remove_deep_conv, help='name of the run')
+    parser.add_argument('--rm_deep', type=str, default=config.remove_deep_conv, help='remove deep conv layers')
+    parser.add_argument('--basic_dim', type=str, default=config.basic_dim, help='basic dimension for UNet')
     parser.add_argument('--epochs', type=int, default=config.epochs, help='number of epochs')
     parser.add_argument('--seed', type=int, default=config.seed, help='random seed')
     parser.add_argument('--batch_size', type=int, default=config.batch_size, help='batch size')
@@ -214,7 +214,7 @@ if __name__ == '__main__':
     ## seed everything
     set_seed(config.seed)
 
-    diffuser = Diffusion(config.noise_steps, img_size=config.img_size, num_classes=config.num_classes, remove_deep_conv=config.remove_deep_conv)
+    diffuser = Diffusion(config.noise_steps, img_size=config.img_size, num_classes=config.num_classes, remove_deep_conv=config.remove_deep_conv, basic_dim=config.basic_dim)
     with wandb.init(project="train_sd", group="train", config=config):
         diffuser.prepare(config)
         diffuser.fit(config)
