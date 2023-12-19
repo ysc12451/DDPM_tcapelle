@@ -22,6 +22,7 @@ from modules import UNet_conditional, EMA
 
 config = SimpleNamespace(    
     run_name = "DDPM_conditional",
+    remove_deep_conv = True,
     epochs = 100,
     noise_steps=1000,
     seed = 42,
@@ -189,6 +190,7 @@ class Diffusion:
 def parse_args(config):
     parser = argparse.ArgumentParser(description='Process hyper-parameters')
     parser.add_argument('--run_name', type=str, default=config.run_name, help='name of the run')
+    parser.add_argument('--rm_deep', type=str, default=config.remove_deep_conv, help='name of the run')
     parser.add_argument('--epochs', type=int, default=config.epochs, help='number of epochs')
     parser.add_argument('--seed', type=int, default=config.seed, help='random seed')
     parser.add_argument('--batch_size', type=int, default=config.batch_size, help='batch size')
@@ -212,7 +214,7 @@ if __name__ == '__main__':
     ## seed everything
     set_seed(config.seed)
 
-    diffuser = Diffusion(config.noise_steps, img_size=config.img_size, num_classes=config.num_classes)
+    diffuser = Diffusion(config.noise_steps, img_size=config.img_size, num_classes=config.num_classes, remove_deep_conv=config.remove_deep_conv)
     with wandb.init(project="train_sd", group="train", config=config):
         diffuser.prepare(config)
         diffuser.fit(config)
