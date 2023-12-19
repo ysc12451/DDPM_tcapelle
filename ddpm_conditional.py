@@ -8,6 +8,8 @@ It is based on @dome272.
 import argparse, logging, copy
 from types import SimpleNamespace
 from contextlib import nullcontext
+from PIL import Image
+import os
 
 import torch
 from torch import optim
@@ -23,16 +25,16 @@ from modules import UNet_conditional, EMA
 config = SimpleNamespace(    
     run_name = "DDPM_conditional",
     remove_deep_conv = True,
-    basic_dim = 32,
-    epochs = 100,
-    noise_steps= 500,
+    basic_dim = 2, # 64
+    epochs = 1, # 100
+    noise_steps=2, # 1000
     seed = 42,
     batch_size = 10,
-    img_size = 64,
+    img_size = 8, # 64
     num_classes = 101,
     # dataset_path = get_cifar(img_size=64),
-    # dataset_path = "/mnt/c/Code/cs771_project/data/",
-    dataset_path = "/storage08/shuchen/DDPM/",
+    dataset_path = "/mnt/c/Code/cs771_project/data/",
+    # dataset_path = "/storage08/shuchen/DDPM/",
     train_folder = "train",
     val_folder = "test",
     device = "cuda",
@@ -46,9 +48,8 @@ config = SimpleNamespace(
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s", level=logging.INFO, datefmt="%I:%M:%S")
 
-
 class Diffusion:
-    def __init__(self, noise_steps=1000, beta_start=1e-4, beta_end=0.02, img_size=256, num_classes=10, c_in=3, c_out=3, device="cuda", **kwargs):
+    def __init__(self, noise_steps=1000, beta_start=1e-4, beta_end=0.02, img_size=256, num_classes=101, c_in=3, c_out=3, device="cuda", **kwargs):
         self.noise_steps = noise_steps
         self.beta_start = beta_start
         self.beta_end = beta_end
@@ -78,7 +79,7 @@ class Diffusion:
         return sqrt_alpha_hat * x + sqrt_one_minus_alpha_hat * Ɛ, Ɛ
     
     @torch.inference_mode()
-    def sample(self, use_ema, labels, cfg_scale=3):
+    def sample(self, use_ema, labels, cfg_scale=3): # cfg_scale: linear weight w for cond and uncond
         model = self.ema_model if use_ema else self.model
         n = len(labels)
         logging.info(f"Sampling {n} new images....")
@@ -142,7 +143,7 @@ class Diffusion:
 
         # EMA model sampling
         ema_sampled_images = self.sample(use_ema=True, labels=labels)
-        plot_images(sampled_images)  #to display on jupyter if available
+        # plot_images(sampled_images)  #to display on jupyter if available
         wandb.log({"ema_sampled_images": [wandb.Image(img.permute(1,2,0).squeeze().cpu().numpy()) for img in ema_sampled_images]})
 
     def load(self, model_cpkt_path, model_ckpt="ckpt.pt", ema_model_ckpt="ema_ckpt.pt"):
@@ -181,6 +182,7 @@ class Diffusion:
             # log predicitons
             if epoch % args.log_every_epoch == 0:
                 self.log_images()
+                self.save_model(run_name=f"{args.run_name}_ep{epoch}", epoch=epoch)
 
         # save model
         self.save_model(run_name=args.run_name, epoch=epoch)
