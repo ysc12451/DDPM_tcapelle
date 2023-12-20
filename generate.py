@@ -47,12 +47,12 @@ def combine_images(image_list, output_path, images_per_row=10):
 config = SimpleNamespace(    
     run_name = "DDPM_conditional",
     remove_deep_conv = True,
-    basic_dim = 64,
+    basic_dim = 32,
     epochs = 100,
-    noise_steps=100,
+    noise_steps = 500,
     seed = 42,
     batch_size = 10,
-    img_size = 32,
+    img_size = 64,
     num_classes = 101,
     # dataset_path = "C:\Code\cs771_project\data",
     # dataset_path = "/mnt/c/Code/cs771_project/data/",
@@ -70,15 +70,17 @@ config = SimpleNamespace(
 if __name__ == '__main__':
     n = 1
 
-    # model_path = os.path.join(config.dataset_path, "")
+    model_path = os.path.join(config.dataset_path, "DDPM_tcapelle/models/DDPM_conditional/")
     device = config.device
     model = UNet_conditional(num_classes=config.num_classes).to(device)
-    diffusion = Diffusion(img_size=config.img_size, device=device)
+    diffusion = Diffusion(img_size=config.img_size, remove_deep_conv=config.remove_deep_conv, device=device)
     # ckpt = torch.load(model_path)
-    # diffusion.load(model_path)
+    diffusion.load(model_path)
 
     # y = torch.Tensor([6] * n).long().to(device)
     labels = torch.arange(config.num_classes).long().to(device)
     sampled_images = diffusion.sample(use_ema=False, labels=labels)
+    sampled_images_ema = diffusion.sample(use_ema=True, labels=labels)
 
-    combine_images(sampled_images, os.path.join(config.dataset_path, 'combined_image.png'), images_per_row=10)
+    combine_images(sampled_images, os.path.join(config.dataset_path, 'ckpt_100.png'), images_per_row=10)
+    combine_images(sampled_images_ema, os.path.join(config.dataset_path, 'ema_ckpt_100.png'), images_per_row=10)
