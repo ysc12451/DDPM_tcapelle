@@ -45,16 +45,16 @@ def combine_images(image_list, output_path, images_per_row=10):
     combined_image.save(output_path)
 
 config = SimpleNamespace(    
-    run_name = "DDPM_conditional",
+    run_name = "DDPM_conditional_1220",
     remove_deep_conv = True,
-    basic_dim = 32,
-    epochs = 100,
-    noise_steps = 500,
+    basic_dim = 32, # 64
+    epochs = 100, # 100
+    noise_steps= 800, # 1000
     seed = 42,
     batch_size = 10,
-    img_size = 64,
+    img_size = 64, # 64
     num_classes = 101,
-    # dataset_path = "C:\Code\cs771_project\data",
+    # dataset_path = get_cifar(img_size=64),
     # dataset_path = "/mnt/c/Code/cs771_project/data/",
     dataset_path = "/storage08/shuchen/DDPM/",
     train_folder = "train",
@@ -65,7 +65,8 @@ config = SimpleNamespace(
     fp16 = True,
     log_every_epoch = 10,
     num_workers=10,
-    lr = 5e-3)
+    lr = 2e-3 # 5e-3
+) 
 
 if __name__ == '__main__':
     n = 1
