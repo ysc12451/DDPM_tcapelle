@@ -61,6 +61,34 @@ inverse_transform = torchvision.transforms.Compose([
 # Note: F.resize is a placeholder for the actual function used for resizing in your code (e.g., PIL's Image.resize).
 # You may need to replace it with the appropriate function based on the library you are using for image processing.
 
+def combine_images(image_list, output_path, images_per_row=10):
+    """
+    Combine a list of images into a single image with a specified number of images per row.
+
+    Parameters:
+    - image_list: List of image objects (Pillow Image objects or equivalent).
+    - output_path: Path to save the combined image.
+    - images_per_row: Number of images to display in each row (default is 10).
+    """
+    # Calculate the dimensions of the combined image
+    _, image_width, image_height = image_list[0].size()
+    combined_width = images_per_row * image_width
+    combined_height = ((len(image_list) - 1) // images_per_row + 1) * image_height
+
+    # Create a new image for the combined result
+    combined_image = Image.new('RGB', (combined_width, combined_height), (255, 255, 255))
+
+    # Paste each image onto the combined image
+    for i, image_tensor in enumerate(image_list):
+        to_pil = transforms.ToPILImage()
+        image = to_pil(image_tensor)
+        x_offset = (i % images_per_row) * image_width
+        y_offset = (i // images_per_row) * image_height
+        box = (x_offset, y_offset, x_offset + image_width, y_offset + image_height)
+        combined_image.paste(image, box)
+
+    # Save the combined image
+    combined_image.save(output_path)
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s", level=logging.INFO, datefmt="%I:%M:%S")
 
@@ -151,14 +179,16 @@ class Diffusion:
             pbar.comment = f"MSE={loss.item():2.3f}"        
         return avg_loss.mean().item()
 
-    def log_images(self):
+    def log_images(self, epoch):
         "Log images to wandb and save them to disk"
         labels = torch.arange(self.num_classes).long().to(self.device)
         sampled_images = self.sample(use_ema=False, labels=labels)
+        combine_images(sampled_images, os.path.join("/storage08/shuchen/DDPM/DDPM_tcapelle/outputs/", f'ckpt_ep{epoch}.png'), images_per_row=10)
         wandb.log({"sampled_images":     [wandb.Image(img.permute(1,2,0).squeeze().cpu().numpy()) for img in sampled_images]})
 
         # EMA model sampling
         ema_sampled_images = self.sample(use_ema=True, labels=labels)
+        combine_images(ema_sampled_images, os.path.join("/storage08/shuchen/DDPM/DDPM_tcapelle/outputs/", f'ema_ckpt_ep{epoch}.png'), images_per_row=10)
         # plot_images(sampled_images)  #to display on jupyter if available
         wandb.log({"ema_sampled_images": [wandb.Image(img.permute(1,2,0).squeeze().cpu().numpy()) for img in ema_sampled_images]})
 
@@ -197,7 +227,7 @@ class Diffusion:
             
             # log predicitons
             if epoch % args.log_every_epoch == 0:
-                self.log_images()
+                self.log_images(epoch)
                 self.save_model(run_name=f"{args.run_name}_ep{epoch}", epoch=epoch)
 
         # save model
