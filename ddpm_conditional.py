@@ -14,6 +14,7 @@ import os
 import torch
 from torch import optim
 import torch.nn as nn
+import torchvision.transforms.functional as F
 import numpy as np
 from fastprogress import progress_bar
 
@@ -44,6 +45,20 @@ config = SimpleNamespace(
     log_every_epoch = 10,
     num_workers=10,
     lr = 5e-3)
+
+inverse_transform = torchvision.transforms.Compose([
+    # Inverse of Normalize
+    T.Normalize((-1.0, -1.0, -1.0), (2.0, 2.0, 2.0)),  
+    # Inverse of ToTensor
+    T.Lambda(lambda x: x * 0.5 + 0.5),  
+    # Inverse of RandomResizedCrop
+    # T.Lambda(lambda x: F.resize(x, int(1.0 / 0.8)))
+    # Inverse of Resize
+    # T.Lambda(lambda x: F.resize(x, int(4 / 3 * args.img_size))),
+])
+
+# Note: F.resize is a placeholder for the actual function used for resizing in your code (e.g., PIL's Image.resize).
+# You may need to replace it with the appropriate function based on the library you are using for image processing.
 
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s", level=logging.INFO, datefmt="%I:%M:%S")
@@ -79,7 +94,7 @@ class Diffusion:
         return sqrt_alpha_hat * x + sqrt_one_minus_alpha_hat * Ɛ, Ɛ
     
     @torch.inference_mode()
-    def sample(self, use_ema, labels, cfg_scale=3): # cfg_scale: linear weight w for cond and uncond
+    def sample(self, use_ema, labels, inv_trans = False, cfg_scale=3): # cfg_scale: linear weight w for cond and uncond
         model = self.ema_model if use_ema else self.model
         n = len(labels)
         logging.info(f"Sampling {n} new images....")
@@ -100,7 +115,10 @@ class Diffusion:
                 else:
                     noise = torch.zeros_like(x)
                 x = 1 / torch.sqrt(alpha) * (x - ((1 - alpha) / (torch.sqrt(1 - alpha_hat))) * predicted_noise) + torch.sqrt(beta) * noise
-        x = (x.clamp(-1, 1) + 1) / 2
+        if inv_trans:
+            x = inverse_transform(x)
+        else:
+            x = (x.clamp(-1, 1) + 1) / 2
         x = (x * 255).type(torch.uint8)
         return x
 
