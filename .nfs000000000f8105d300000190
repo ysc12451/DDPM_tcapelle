@@ -24,11 +24,11 @@ from modules import UNet_conditional, EMA
 
 
 config = SimpleNamespace(    
-    run_name = "DDPM_conditional_1220",
+    run_name = "DDPM_conditional",
     remove_deep_conv = True,
     basic_dim = 32, # 64
     epochs = 100, # 100
-    noise_steps= 800, # 1000
+    noise_steps= 500, # 1000
     seed = 42,
     batch_size = 10,
     img_size = 64, # 64
@@ -44,8 +44,7 @@ config = SimpleNamespace(
     fp16 = True,
     log_every_epoch = 10,
     num_workers=10,
-    lr = 2e-3 # 5e-3
-) 
+    lr = 5e-3)
 
 inverse_transform = torchvision.transforms.Compose([
     # Inverse of Normalize
@@ -95,7 +94,7 @@ class Diffusion:
         return sqrt_alpha_hat * x + sqrt_one_minus_alpha_hat * Ɛ, Ɛ
     
     @torch.inference_mode()
-    def sample(self, use_ema, labels, cfg_scale=3): # cfg_scale: linear weight w for cond and uncond
+    def sample(self, use_ema, labels, inv_trans = False, cfg_scale=3): # cfg_scale: linear weight w for cond and uncond
         model = self.ema_model if use_ema else self.model
         n = len(labels)
         logging.info(f"Sampling {n} new images....")
@@ -116,7 +115,10 @@ class Diffusion:
                 else:
                     noise = torch.zeros_like(x)
                 x = 1 / torch.sqrt(alpha) * (x - ((1 - alpha) / (torch.sqrt(1 - alpha_hat))) * predicted_noise) + torch.sqrt(beta) * noise
-        x = (x.clamp(-1, 1) + 1) / 2
+        if inv_trans:
+            x = inverse_transform(x)
+        else:
+            x = (x.clamp(-1, 1) + 1) / 2
         x = (x * 255).type(torch.uint8)
         return x
 
